@@ -6,7 +6,7 @@ import { db } from '../db';
 import { usersTable } from '../schema';
 import { createUserSchema } from '../types/users';
 
-
+import { getUser } from '../kinde';
 
 import { randomUUID } from 'crypto' // Add this import
 
@@ -14,18 +14,13 @@ import { randomUUID } from 'crypto' // Add this import
 const usersRouter = new Hono();
 
 // fake users
-const fakeUsers = [
-    {id: randomUUID(), name: 'John Doe', email: 'john@doe.com', phoneNumber: '1234567890', address: '123 Main St', age: 25},
-    {id: randomUUID(), name: 'Jane Doe', email: 'jane@doe.com', phoneNumber: '1234567890', address: '123 Main St', age: 25},
-]
- 
+
 usersRouter.post('/', zValidator('json', createUserSchema),async (c) => {
 
     const { name, email, phoneNumber, address, age } = c.req.valid('json');
 
     try {
         const createdUser = await db.insert(usersTable).values({ id:  randomUUID(), name, email, phoneNumber, address, age }).returning();
-        console.log({createdUser})
         return c.json(createdUser);
     } catch (error) {
         console.error(error)
@@ -55,11 +50,22 @@ usersRouter.put('/:id', async(c)=>{
     return c.json(updatedUser);
 });
 
-
 usersRouter.delete('/:id', async(c)=>{
     const {id} = c.req.param();
     const deletedUser = await db.delete(usersTable).where(eq(usersTable.id, id));
     return c.json(deletedUser);
+});
+
+const seedUsers = [
+    { id: randomUUID(), name: 'John Doe', email: 'john@example.com', phoneNumber: '1234567890', address: '123 Main St', age: 25, isAdmin: false },
+    { id: randomUUID(), name: 'Jane Doe', email: 'jane@example.com', phoneNumber: '1234567890', address: '123 Main St', age: 25, isAdmin: false },
+    { id: randomUUID(), name: 'Jim Beam', email: 'jim@example.com', phoneNumber: '1234567890', address: '123 Main St', age: 25, isAdmin: false },
+    {id:randomUUID(), name:'admin', email:'admin@example.com', phoneNumber:'1234567890', address:'123 Main St', age:25, isAdmin:true}
+]
+
+usersRouter.post('/seed', getUser, async (c) => {
+    const users = await db.insert(usersTable).values(seedUsers).returning();
+    return c.json(users);
 });
 
 export default usersRouter;
